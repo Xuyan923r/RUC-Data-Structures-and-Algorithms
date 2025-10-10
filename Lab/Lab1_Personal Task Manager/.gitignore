@@ -1,9 +1,0 @@
-# 忽略 macOS 自动生成的文件
-.DS_Store
-
-# 忽略 Visual Studio Code 的用户个人设置和历史记录
-.vscode/*
-!/.vscode/settings.json
-!/.vscode/extensions.json
-!/.vscode/launch.json
-!/.vscode/tasks.json
