@@ -1,6 +1,5 @@
 #include "LinkedTaskManager.h"
 #include <fstream>
-#include <algorithm>
 #include <iostream>
 
 // 构造函数
@@ -101,16 +100,40 @@ std::vector<Task> LinkedTaskManager::getAllTasksSorted(bool byDueDate) {
         current = current->next;
     }
 
-    // 步骤2: 对 vector 进行排序 (与 SequentialTaskManager 完全相同的逻辑)
     if (byDueDate) {
-        std::sort(allTasks.begin(), allTasks.end(), [](const Task& a, const Task& b) {
-            return a.dueDate < b.dueDate;
-        });
+        int len = static_cast<int>(allTasks.size());
+        for (int i = 1; i < len; ++i) {
+            Task currentTask = allTasks[static_cast<std::size_t>(i)];
+            int back = i - 1;
+            while (back >= 0) {
+                std::size_t pos = static_cast<std::size_t>(back);
+                if (currentTask.dueDate < allTasks[pos].dueDate) {
+                    allTasks[pos + 1] = allTasks[pos];
+                    --back;
+                } else {
+                    break;
+                }
+            }
+            allTasks[static_cast<std::size_t>(back + 1)] = currentTask;
+        }
     } else {
-        std::sort(allTasks.begin(), allTasks.end(), [](const Task& a, const Task& b) {
-            return a.priority > b.priority;
-        });
+        int len = static_cast<int>(allTasks.size());
+        for (int i = 1; i < len; ++i) {
+            Task currentTask = allTasks[static_cast<std::size_t>(i)];
+            int back = i - 1;
+            while (back >= 0) {
+                std::size_t pos = static_cast<std::size_t>(back);
+                if (currentTask.priority > allTasks[pos].priority) {
+                    allTasks[pos + 1] = allTasks[pos];
+                    --back;
+                } else {
+                    break;
+                }
+            }
+            allTasks[static_cast<std::size_t>(back + 1)] = currentTask;
+        }
     }
+
     return allTasks;
 }
 

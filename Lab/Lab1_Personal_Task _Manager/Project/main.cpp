@@ -13,7 +13,6 @@
 #include "DoublyLinkedTaskManager.h" // 双向链表实现
 
 
-// --- 原有的函数声明 ---
 void printMenu();
 void handleAddTask(TaskManager* manager);
 void handleDeleteTask(TaskManager* manager);

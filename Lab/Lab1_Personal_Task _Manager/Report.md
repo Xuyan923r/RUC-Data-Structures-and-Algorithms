@@ -1,7 +1,7 @@
 # 实验报告
 
 ## 题目
-实验1：线性表的应用
+实验 1：线性表的应用
 
 ## 姓名
 叶栩言
@@ -10,272 +10,71 @@
 2023200033
 
 ## 完成日期
-2025年10月9日
+2025 年 10 月 9 日
 
 ---
 
 ## 1. 需求分析
 
-### 程序设计任务
-本实验旨在实现一个任务管理系统，支持用户通过三种不同的数据结构（顺序表、单向链表、双向链表）进行任务的增删改查、排序、保存和加载功能。通过对比三种数据结构的性能，深入理解其特点及适用场景。
+### 程序目标
+本实验实现一个任务管理小程序。用户可以选择不同的数据结构完成任务的增删改查、排序、存盘与读盘等常用操作，并比较顺序表、单链表和双链表的差异。通过统一的功能接口，可以更直观地理解三种线性结构在实现细节和效率上的取舍。
 
-### 输入形式和范围
-- **任务名称**：字符串，长度不超过50个字符。
-- **任务描述**：字符串，长度不超过200个字符。
-- **任务优先级**：整数，范围为1到5，数字越大表示优先级越高。
-- **任务截止日期**：日期格式为YYYY-MM-DD。
+### 输入范围
+- **名称**：不超过 50 个字符的字符串。
+- **描述**：不超过 200 个字符的字符串。
+- **优先级**：整数 1~5，值越大表示越紧急。
+- **截止日期**：采用 `YYYY-MM-DD` 格式的日期字符串。
 
-### 输出形式
-- **任务列表**：包括任务名称、描述、优先级和截止日期。
-- **提示信息**：如“任务添加成功”、“任务未找到”等。
+### 输出内容
+- **任务列表**：展示名称、描述、优先级和截止日期。
+- **提示信息**：如操作成功与否的反馈。
 
-### 程序功能
-- **添加任务**：将新任务添加到任务列表。
-- **删除任务**：根据任务名称删除任务。
-- **修改任务**：更新任务的名称、描述、优先级或截止日期。
-- **查询任务**：根据名称或其他条件查找任务。
-- **排序任务**：按截止日期或优先级排序任务。
-- **保存任务**：将任务列表保存到文件。
-- **加载任务**：从文件加载任务列表。
+### 功能划分
+- 添加、删除、修改、查询任务。
+- 按截止日期或优先级对任务进行排序。
+- 将任务列表保存到磁盘或再次加载。
 
-### 测试数据
-#### 正确输入
-- 添加任务：名称为“数据结构作业”，描述为“写完王秋月老师布置的Lab”，优先级为5，截止日期为2025-10-15。
-- 查询任务：名称为“数据结构作业”。
-
-#### 错误输入
-- 添加任务：优先级为6（超出范围）。
-- 查询任务：名称为“不存在的任务”。
+### 测试
+- 例：添加“数据结构作业”，优先级 5，截止日期 2025-10-15，再按名称查询该任务。
+- 例：输入优先级 6；或者查询从未录入的任务名称。
 
 ---
 
 ## 2. 概要设计
 
-### 抽象数据类型定义
-- **`Task`**：表示任务的数据结构，包含名称、描述、优先级和截止日期。
-- **`TaskManager`**：任务管理器的抽象基类，定义了任务管理的基本操作。
+### 抽象数据结构
+- `Task` 表示单个任务，封装名称、描述、优先级和截止日期。
+- `TaskManager` 为抽象基类，给出统一的任务管理接口。
 
-### 主程序流程
-1. 用户选择数据结构（顺序表、单向链表、双向链表）。
-2. 进入主菜单，用户选择操作（添加、删除、修改、查询等）。
-3. 根据用户输入调用相应的功能模块。
-4. 输出操作结果或提示信息。
+### 总体流程
+1. 程序启动后让用户在顺序表、单链表、双链表三种实现里任选其一。
+2. 显示菜单，用户依次执行增删改查、排序、存储等操作。
+3. 操作完成后打印结果或提示信息。
 
-### 模块层次关系
-- **`main.cpp`**：主程序入口，提供用户交互界面。
-- **`SequentialTaskManager`**：顺序表实现。
-- **`LinkedTaskManager`**：单向链表实现。
-- **`DoublyLinkedTaskManager`**：双向链表实现。
-
-> 顺序表、单向链表、双向链表是各自独立的数据结构实现，只可选择一种。
+### 模块关系
+```
+main.cpp
+ ├─ TaskManager.h
+ ├─ Task.h
+ ├─ SequentialTaskManager.{h,cpp}
+ ├─ LinkedTaskManager.{h,cpp}
+ └─ DoublyLinkedTaskManager.{h,cpp}
+```
 
 ---
 
 ## 3. 详细设计
 
-### 数据类型实现
-#### `Task` 数据结构
+### 核心数据类型
 ```cpp
 struct Task {
-    std::string name;        // 任务名称
-    std::string description; // 任务描述
-    int priority;            // 任务优先级 (1-5)
-    std::string dueDate;     // 任务截止日期 (YYYY-MM-DD)
+    std::string name;
+    std::string description;
+    int priority;
+    std::string dueDate;
 };
 ```
-
-### 伪码展示
-#### 添加任务
-```
-输入任务名称、描述、优先级和截止日期
-检查优先级是否在范围内
-如果合法，创建任务对象并添加到任务列表
-输出“任务添加成功”
-否则，输出“优先级不合法”
-```
-
-#### 删除任务
-```
-输入任务名称
-在任务列表中查找任务
-如果找到，删除任务并输出“任务删除成功”
-否则，输出“任务未找到”
-```
-
-#### 查询任务
-```
-输入查询条件（如任务名称）
-遍历任务列表，查找符合条件的任务
-如果找到，输出任务信息
-否则，输出“任务未找到”
-```
-
-### 函数调用关系图
-```
-main.cpp
-|
-|-- SequentialTaskManager.h
-|   |-- SequentialTaskManager.cpp
-|
-|-- LinkedTaskManager.h
-|   |-- LinkedTaskManager.cpp
-|
-|-- DoublyLinkedTaskManager.h
-|   |-- DoublyLinkedTaskManager.cpp
-|
-|-- TaskManager.h
-|-- Task.h
-```
-
----
-
-## 4. 调试分析
-
-### 调试问题及解决
-- **问题 1**：输入优先级超出范围时程序崩溃。
-  - **原因**：未对用户输入的优先级进行有效性检查。
-  - **解决**：在输入优先级时增加范围检查，确保优先级在 1 到 5 之间。
-  - **代码示例**：
-    ```cpp
-    if (priority < 1 || priority > 5) {
-        std::cout << "优先级不合法，请输入 1 到 5 之间的数字。" << std::endl;
-        return;
-    }
-    ```
-
-- **问题 2**：任务名称重复导致数据冲突。
-  - **原因**：在添加任务时未检查名称是否重复。
-  - **解决**：在添加任务前，遍历任务列表检查是否存在相同名称的任务。
-  - **代码示例**：
-    ```cpp
-    for (const auto& task : tasks) {
-        if (task.name == newTask.name) {
-            std::cout << "任务名称重复，无法添加。" << std::endl;
-            return;
-        }
-    }
-    ```
-
-- **问题 3**：文件保存失败。
-  - **原因**：文件路径错误或文件权限不足。
-  - **解决**：在保存文件时增加错误处理逻辑，并提示用户检查文件路径和权限。
-  - **代码示例**：
-    ```cpp
-    std::ofstream outFile(filename);
-    if (!outFile.is_open()) {
-        std::cout << "文件保存失败，请检查路径和权限。" << std::endl;
-        return false;
-    }
-    ```
-
-### 时空复杂度分析
-- **添加任务**：
-  - 时间复杂度：$O(1)$（顺序表）或 $O(n)$（链表）。
-  - 空间复杂度：$O(n)$。
-- **删除任务**：
-  - 时间复杂度：$O(n)$。
-  - 空间复杂度：$O(n)$。
-- **查询任务**：
-  - 时间复杂度：$O(n)$。
-  - 空间复杂度：$O(n)$。
-
-### 经验和体会
-通过调试过程，发现了程序设计中的多个潜在问题，并通过逐步优化提高了代码的健壮性和可维护性。尤其是在处理用户输入和文件操作时，增加了更多的错误处理逻辑，确保程序在各种边界情况下都能正常运行。
-
----
-
-## 5. 用户使用说明
-
-### 操作步骤
-1. **编译项目**：
-   使用以下命令编译项目：
-   ```bash
-   g++ -o TaskManager main.cpp SequentialTaskManager.cpp LinkedTaskManager.cpp DoublyLinkedTaskManager.cpp -std=c++11
-   ```
-   如果编译过程中出现错误，请检查是否安装了 GCC 编译器，并确保所有源文件都在同一目录下。
-
-2. **运行程序**：
-   使用以下命令运行程序：
-   ```bash
-   ./TaskManager
-   ```
-   程序启动后会显示主菜单，用户可以根据提示选择操作。
-
-3. **选择数据结构**：
-   程序启动时会提示用户选择数据结构（顺序表、单向链表或双向链表）。根据实际需求输入对应的数字（1、2 或 3）。
-
-4. **执行任务管理操作**：
-   - **添加任务**：选择菜单中的“添加任务”选项，输入任务名称、描述、优先级和截止日期。
-   - **删除任务**：选择菜单中的“删除任务”选项，输入要删除的任务名称。
-   - **修改任务**：选择菜单中的“修改任务”选项，输入任务名称和新的任务信息。
-   - **查询任务**：选择菜单中的“查询任务”选项，输入查询条件（名称或截止日期）。
-   - **排序任务**：选择菜单中的“按截止日期排序”或“按优先级排序”选项。
-   - **保存任务到文件**：选择菜单中的“保存任务到文件”选项，输入文件名。
-   - **从文件加载任务**：选择菜单中的“从文件加载任务”选项，输入文件路径。
-
-5. **退出程序**：
-   在主菜单中选择“退出系统”选项，程序会安全退出并释放所有资源。
-
-### Tips
-
-- 输入任务名称时，请确保名称唯一，否则会导致添加失败。
-- 输入日期时，请使用“YYYY-MM-DD”格式，确保日期合法。
-- 文件操作时，请确保文件路径正确且具有读写权限。
-- 如果程序出现异常，请检查输入数据的合法性，并根据提示信息进行修正。
-
-
----
-
-## 6. 测试结果
-
-### 测试数据
-#### 正确输入
-- 添加任务：名称为“学习数据结构”，描述为“完成实验报告”，优先级为5，截止日期为2025-10-15。
-  **输出**：任务添加成功。
-- 查询任务：名称为“学习数据结构”。
-  **输出**：任务信息，包括名称、描述、优先级和截止日期。
-
-#### 错误输入
-- 添加任务：优先级为6（超出范围）。
-  **输出**：优先级不合法。
-- 查询任务：名称为“不存在的任务”。
-  **输出**：任务未找到。
-
----
-
-## 7. 附录
-
-### 源代码
-
-#### Task.h
-```h
-#pragma once
-
-#include <string>
-
-// 定义任务的数据结构
-struct Task {
-    std::string name;        // 任务名称 
-    std::string description; // 任务描述
-    int priority;            // 任务优先级 (1-5，数字越大优先级越高)
-    std::string dueDate;     // 任务截止日期 (格式: YYYY-MM-DD) 
-};
-
-
-// Notes:  为什么只有int priority前面没有std::string
-// 因为int是基本数据类型，不需要包含头文件，而std::string是C++标准库中的类，需要包含<string>头文件。
-
-```
-
-#### TaskManager.h
-```h
-#pragma once
-
-#include <string>
-#include <vector>
-#include "Task.h"
-
-// 定义任务管理器的抽象基类
+```cpp
 class TaskManager {
 public:
     // 虚析构函数，确保通过基类指针删除派生类对象时能正确释放资源
@@ -305,7 +104,108 @@ public:
 
 ```
 
-#### main.cpp
+### 关键功能逻辑
+- **添加**：将新任务附加到当前结构末尾或尾节点。
+- **删除 / 修改**：线性扫描查找目标，找到后执行删除或覆盖。
+- **查询**：按名称或截止日期遍历并收集匹配项。
+- **排序**：顺序表用冒泡写法反复交换；链表实现则把数据挪到临时数组里，再用同样循环完成插入或选择排序。
+- **持久化**：任务数据使用逗号分隔的文本格式保存。
+
+---
+
+## 4. 调试记录
+
+1. **优先级越界**  
+   原因：缺乏输入范围校验。  
+   处理：在录入阶段增加范围判断并给出提示。
+
+2. **重复任务名称**  
+   原因：添加时未检查重名。  
+   处理：插入前先遍历任务表，若已有同名任务则拒绝添加。
+
+3. **文件存取失败**  
+   原因：路径错误或无权限。  
+   处理：文件打开失败时输出提示，并保持原数据不变。
+
+4. **排序循环冗长**  
+   原因：为了图省事，直接写了最基础的双层循环，没有做任何提前退出或复用。  
+   处理：保留这种朴素写法，虽然多跑几轮，但逻辑一目了然，方便后续调试。
+
+---
+
+## 5. 使用说明
+
+1. **编译**  
+   ```bash
+   g++ -std=c++11 -o TaskManager main.cpp SequentialTaskManager.cpp LinkedTaskManager.cpp DoublyLinkedTaskManager.cpp
+   ```
+2. **运行**  
+   ```bash
+   ./TaskManager
+   ```
+   按提示选择数据结构，再根据菜单输入指令。
+3. **常见操作**  
+   - 添加：输入任务四要素。  
+   - 删除：输入任务名称。  
+   - 修改：输入名称后提供新内容。  
+   - 查询：按名称或日期检索。  
+   - 排序：可按日期升序，或按优先级降序。  
+   - 保存 / 加载：输入文件名即可。
+4. **提示**  
+   - 日期需要符合 `YYYY-MM-DD`。  
+   - 保存文件前确认路径可写。
+
+---
+
+## 6. 测试情况
+
+| 序号 | 场景描述 | 预期结果 |
+| --- | --- | --- |
+| 1 | 添加任务“学习数据结构”，优先级 5，截止 2025-10-15 | 成功，列表中可见该任务 |
+| 2 | 查询名称为“学习数据结构”的任务 | 打印完整任务信息 |
+| 3 | 添加优先级 6 的任务 | 提示优先级非法，操作失败 |
+| 4 | 查询不存在的任务名称 | 提示未找到 |
+
+---
+
+## 7. 附录
+
+### Task.h
+```h
+#pragma once
+
+#include <string>
+
+struct Task {
+    std::string name;
+    std::string description;
+    int priority;
+    std::string dueDate;
+};
+```
+
+### TaskManager.h
+```h
+#pragma once
+
+#include <string>
+#include <vector>
+#include "Task.h"
+
+class TaskManager {
+public:
+    virtual ~TaskManager() noexcept = default;
+    virtual void addTask(const Task& task) = 0;
+    virtual bool deleteTask(const std::string& name) = 0;
+    virtual bool updateTask(const std::string& name, const Task& newTask) = 0;
+    virtual std::vector<Task> queryTasks(const std::string& queryString, bool byName) = 0;
+    virtual std::vector<Task> getAllTasksSorted(bool byDueDate) = 0;
+    virtual bool saveToFile(const std::string& filename) = 0;
+    virtual bool loadFromFile(const std::string& filename) = 0;
+};
+```
+
+### main.cpp
 ```cpp
 #include <iostream>
 #include <string>
@@ -322,7 +222,6 @@ public:
 #include "DoublyLinkedTaskManager.h" // 双向链表实现
 
 
-// --- 原有的函数声明 ---
 void printMenu();
 void handleAddTask(TaskManager* manager);
 void handleDeleteTask(TaskManager* manager);
@@ -685,35 +584,10 @@ std::vector<Task> filterUpcomingTasks(const std::vector<Task>& allTasks, int day
 
 ```
 
-#### SequentialTaskManager.h
-```h
-#pragma once
-
-#include "TaskManager.h"
-#include <vector>
-
-// 派生类：使用顺序表 (std::vector) 实现任务管理器
-class SequentialTaskManager : public TaskManager {
-public:
-    // 重写 (override) 基类的所有纯虚函数
-    void addTask(const Task& task) override;
-    bool deleteTask(const std::string& name) override;
-    bool updateTask(const std::string& name, const Task& newTask) override;
-    std::vector<Task> queryTasks(const std::string& queryString, bool byName) override;
-    std::vector<Task> getAllTasksSorted(bool byDueDate) override;
-    bool saveToFile(const std::string& filename) override;
-    bool loadFromFile(const std::string& filename) override;
-
-private:
-    std::vector<Task> tasks; // 使用 std::vector 来存储任务
-};
-
-```
-#### SequentialTaskManager.cpp
+### SequentialTaskManager.cpp
 ```cpp
 #include "SequentialTaskManager.h"
 #include <fstream>
-#include <algorithm>
 #include <iostream>
 
 void SequentialTaskManager::addTask(const Task& task) {
@@ -721,13 +595,12 @@ void SequentialTaskManager::addTask(const Task& task) {
 }
 
 bool SequentialTaskManager::deleteTask(const std::string& name) {
-    auto it = std::find_if(tasks.begin(), tasks.end(), [&](const Task& task) {
-        return task.name == name;
-    });
-
-    if (it != tasks.end()) {
-        tasks.erase(it);
-        return true;
+    int length = static_cast<int>(tasks.size());
+    for (int i = 0; i < length; ++i) {
+        if (tasks[static_cast<std::size_t>(i)].name == name) {
+            tasks.erase(tasks.begin() + i);
+            return true;
+        }
     }
 
     std::cout << "不存在该任务，无法删除。\n";
@@ -735,13 +608,11 @@ bool SequentialTaskManager::deleteTask(const std::string& name) {
 }
 
 bool SequentialTaskManager::updateTask(const std::string& name, const Task& newTask) {
-    auto it = std::find_if(tasks.begin(), tasks.end(), [&](const Task& task) {
-        return task.name == name;
-    });
-
-    if (it != tasks.end()) {
-        *it = newTask;
-        return true;
+    for (auto& task : tasks) {
+        if (task.name == name) {
+            task = newTask;
+            return true;
+        }
     }
 
     return false;
@@ -766,15 +637,38 @@ std::vector<Task> SequentialTaskManager::queryTasks(const std::string& queryStri
 std::vector<Task> SequentialTaskManager::getAllTasksSorted(bool byDueDate) {
     std::vector<Task> sortedTasks = tasks;
 
-    if (byDueDate) {
-        std::sort(sortedTasks.begin(), sortedTasks.end(), [](const Task& a, const Task& b) {
-            return a.dueDate < b.dueDate;
-        });
-    } else {
-        std::sort(sortedTasks.begin(), sortedTasks.end(), [](const Task& a, const Task& b) {
-            return a.priority > b.priority;
-        });
+    if (sortedTasks.empty()) {
+        return sortedTasks;
     }
+
+    if (byDueDate) {
+        int limit = static_cast<int>(sortedTasks.size());
+        for (int i = 0; i < limit; ++i) {
+            for (int j = 0; j < limit - 1; ++j) {
+                std::size_t idx = static_cast<std::size_t>(j);
+                std::size_t nextIdx = static_cast<std::size_t>(j + 1);
+                if (sortedTasks[idx].dueDate > sortedTasks[nextIdx].dueDate) {
+                    Task temp = sortedTasks[idx];
+                    sortedTasks[idx] = sortedTasks[nextIdx];
+                    sortedTasks[nextIdx] = temp;
+                }
+            }
+        }
+    } else {
+        int limit = static_cast<int>(sortedTasks.size());
+        for (int i = 0; i < limit; ++i) {
+            for (int j = 0; j < limit - 1; ++j) {
+                std::size_t idx = static_cast<std::size_t>(j);
+                std::size_t nextIdx = static_cast<std::size_t>(j + 1);
+                if (sortedTasks[idx].priority < sortedTasks[nextIdx].priority) {
+                    Task temp = sortedTasks[idx];
+                    sortedTasks[idx] = sortedTasks[nextIdx];
+                    sortedTasks[nextIdx] = temp;
+                }
+            }
+        }
+    }
+
     return sortedTasks;
 }
 
@@ -825,50 +719,11 @@ bool SequentialTaskManager::loadFromFile(const std::string& filename) {
 }
 ```
 
-#### LinkedTaskManager.h
-```h
-#pragma once
-
-#include "TaskManager.h"
-
-// 派生类：使用单向链表实现任务管理器
-class LinkedTaskManager : public TaskManager {
-public:
-    // 构造函数，初始化头指针
-    LinkedTaskManager();
-    // 析构函数，释放链表所有节点的内存
-    ~LinkedTaskManager();
-
-    // 重写基类的所有纯虚函数
-    void addTask(const Task& task) override;
-    bool deleteTask(const std::string& name) override;
-    bool updateTask(const std::string& name, const Task& newTask) override;
-    std::vector<Task> queryTasks(const std::string& queryString, bool byName) override;
-    std::vector<Task> getAllTasksSorted(bool byDueDate) override;
-    bool saveToFile(const std::string& filename) override;
-    bool loadFromFile(const std::string& filename) override;
-
-private:
-    struct Node {
-        Task data;
-        Node* next;
-        Node(const Task& task) : data(task), next(nullptr) {}
-    };
-
-    Node* head; // 指向链表头部的指针
-
-    // 清空链表函数
-    void clear(); 
-};
-
-
-```
-
-#### LinkedTaskManager.cpp
+#### LinkedTaskManager
 ```cpp
+
 #include "LinkedTaskManager.h"
 #include <fstream>
-#include <algorithm>
 #include <iostream>
 
 // 构造函数
@@ -969,16 +824,40 @@ std::vector<Task> LinkedTaskManager::getAllTasksSorted(bool byDueDate) {
         current = current->next;
     }
 
-    // 步骤2: 对 vector 进行排序 (与 SequentialTaskManager 完全相同的逻辑)
     if (byDueDate) {
-        std::sort(allTasks.begin(), allTasks.end(), [](const Task& a, const Task& b) {
-            return a.dueDate < b.dueDate;
-        });
+        int len = static_cast<int>(allTasks.size());
+        for (int i = 1; i < len; ++i) {
+            Task currentTask = allTasks[static_cast<std::size_t>(i)];
+            int back = i - 1;
+            while (back >= 0) {
+                std::size_t pos = static_cast<std::size_t>(back);
+                if (currentTask.dueDate < allTasks[pos].dueDate) {
+                    allTasks[pos + 1] = allTasks[pos];
+                    --back;
+                } else {
+                    break;
+                }
+            }
+            allTasks[static_cast<std::size_t>(back + 1)] = currentTask;
+        }
     } else {
-        std::sort(allTasks.begin(), allTasks.end(), [](const Task& a, const Task& b) {
-            return a.priority > b.priority;
-        });
+        int len = static_cast<int>(allTasks.size());
+        for (int i = 1; i < len; ++i) {
+            Task currentTask = allTasks[static_cast<std::size_t>(i)];
+            int back = i - 1;
+            while (back >= 0) {
+                std::size_t pos = static_cast<std::size_t>(back);
+                if (currentTask.priority > allTasks[pos].priority) {
+                    allTasks[pos + 1] = allTasks[pos];
+                    --back;
+                } else {
+                    break;
+                }
+            }
+            allTasks[static_cast<std::size_t>(back + 1)] = currentTask;
+        }
     }
+
     return allTasks;
 }
 
@@ -1031,54 +910,13 @@ bool LinkedTaskManager::loadFromFile(const std::string& filename) {
     inFile.close();
     return true;
 }
-```
-
-#### DoublyLinkedTaskManager.h
-```h
-#pragma once
-
-#include "TaskManager.h"
-
-// 派生类：使用双向链表实现任务管理器
-class DoublyLinkedTaskManager : public TaskManager {
-public:
-    // 构造函数
-    DoublyLinkedTaskManager();
-    // 析构函数
-    ~DoublyLinkedTaskManager();
-
-    // 重写基类的所有纯虚函数
-    void addTask(const Task& task) override;
-    bool deleteTask(const std::string& name) override;
-    bool updateTask(const std::string& name, const Task& newTask) override;
-    std::vector<Task> queryTasks(const std::string& queryString, bool byName) override;
-    std::vector<Task> getAllTasksSorted(bool byDueDate) override;
-    bool saveToFile(const std::string& filename) override;
-    bool loadFromFile(const std::string& filename) override;
-
-private:
-    // 双向链表节点结构
-    struct Node {
-        Task data;
-        Node* next;
-        Node* prev; // 新增：指向前一个节点的指针
-        Node(const Task& task) : data(task), next(nullptr), prev(nullptr) {}
-    };
-
-    Node* head; // 指向链表头部
-    Node* tail; // 指向链表尾部
-
-    // 清空链表函数
-    void clear();
-};
 
 ```
 
-#### DoublyLinkedTaskManager.cpp
+#### DoublyLinkedTaskManager
 ```cpp
 #include "DoublyLinkedTaskManager.h"
 #include <fstream>
-#include <algorithm>
 #include <iostream>
 
 // 构造函数
@@ -1170,7 +1008,7 @@ std::vector<Task> DoublyLinkedTaskManager::queryTasks(const std::string& querySt
     return result;
 }
 
-// 5. 查看任务列表 (排序) - 逻辑与单向链表实现相同
+// 5. 查看任务列表 (排序) - 采用自写选择排序
 std::vector<Task> DoublyLinkedTaskManager::getAllTasksSorted(bool byDueDate) {
     std::vector<Task> allTasks;
     Node* current = head;
@@ -1180,14 +1018,45 @@ std::vector<Task> DoublyLinkedTaskManager::getAllTasksSorted(bool byDueDate) {
     }
 
     if (byDueDate) {
-        std::sort(allTasks.begin(), allTasks.end(), [](const Task& a, const Task& b) {
-            return a.dueDate < b.dueDate;
-        });
+        int total = static_cast<int>(allTasks.size());
+        for (int i = 0; i < total; ++i) {
+            int minIndex = i;
+            for (int j = i + 1; j < total; ++j) {
+                std::size_t check = static_cast<std::size_t>(j);
+                std::size_t best = static_cast<std::size_t>(minIndex);
+                if (allTasks[check].dueDate < allTasks[best].dueDate) {
+                    minIndex = j;
+                }
+            }
+            if (minIndex != i) {
+                std::size_t first = static_cast<std::size_t>(i);
+                std::size_t second = static_cast<std::size_t>(minIndex);
+                Task temp = allTasks[first];
+                allTasks[first] = allTasks[second];
+                allTasks[second] = temp;
+            }
+        }
     } else {
-        std::sort(allTasks.begin(), allTasks.end(), [](const Task& a, const Task& b) {
-            return a.priority > b.priority;
-        });
+        int total = static_cast<int>(allTasks.size());
+        for (int i = 0; i < total; ++i) {
+            int maxIndex = i;
+            for (int j = i + 1; j < total; ++j) {
+                std::size_t check = static_cast<std::size_t>(j);
+                std::size_t best = static_cast<std::size_t>(maxIndex);
+                if (allTasks[check].priority > allTasks[best].priority) {
+                    maxIndex = j;
+                }
+            }
+            if (maxIndex != i) {
+                std::size_t first = static_cast<std::size_t>(i);
+                std::size_t second = static_cast<std::size_t>(maxIndex);
+                Task temp = allTasks[first];
+                allTasks[first] = allTasks[second];
+                allTasks[second] = temp;
+            }
+        }
     }
+
     return allTasks;
 }
 
@@ -1238,4 +1107,5 @@ bool DoublyLinkedTaskManager::loadFromFile(const std::string& filename) {
     inFile.close();
     return true;
 }
+
 ```

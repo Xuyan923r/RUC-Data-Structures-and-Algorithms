@@ -1,6 +1,5 @@
 #include "DoublyLinkedTaskManager.h"
 #include <fstream>
-#include <algorithm>
 #include <iostream>
 
 // 构造函数
@@ -92,7 +91,7 @@ std::vector<Task> DoublyLinkedTaskManager::queryTasks(const std::string& querySt
     return result;
 }
 
-// 5. 查看任务列表 (排序) - 逻辑与单向链表实现相同
+// 5. 查看任务列表 (排序) - 采用自写选择排序
 std::vector<Task> DoublyLinkedTaskManager::getAllTasksSorted(bool byDueDate) {
     std::vector<Task> allTasks;
     Node* current = head;
@@ -102,14 +101,45 @@ std::vector<Task> DoublyLinkedTaskManager::getAllTasksSorted(bool byDueDate) {
     }
 
     if (byDueDate) {
-        std::sort(allTasks.begin(), allTasks.end(), [](const Task& a, const Task& b) {
-            return a.dueDate < b.dueDate;
-        });
+        int total = static_cast<int>(allTasks.size());
+        for (int i = 0; i < total; ++i) {
+            int minIndex = i;
+            for (int j = i + 1; j < total; ++j) {
+                std::size_t check = static_cast<std::size_t>(j);
+                std::size_t best = static_cast<std::size_t>(minIndex);
+                if (allTasks[check].dueDate < allTasks[best].dueDate) {
+                    minIndex = j;
+                }
+            }
+            if (minIndex != i) {
+                std::size_t first = static_cast<std::size_t>(i);
+                std::size_t second = static_cast<std::size_t>(minIndex);
+                Task temp = allTasks[first];
+                allTasks[first] = allTasks[second];
+                allTasks[second] = temp;
+            }
+        }
     } else {
-        std::sort(allTasks.begin(), allTasks.end(), [](const Task& a, const Task& b) {
-            return a.priority > b.priority;
-        });
+        int total = static_cast<int>(allTasks.size());
+        for (int i = 0; i < total; ++i) {
+            int maxIndex = i;
+            for (int j = i + 1; j < total; ++j) {
+                std::size_t check = static_cast<std::size_t>(j);
+                std::size_t best = static_cast<std::size_t>(maxIndex);
+                if (allTasks[check].priority > allTasks[best].priority) {
+                    maxIndex = j;
+                }
+            }
+            if (maxIndex != i) {
+                std::size_t first = static_cast<std::size_t>(i);
+                std::size_t second = static_cast<std::size_t>(maxIndex);
+                Task temp = allTasks[first];
+                allTasks[first] = allTasks[second];
+                allTasks[second] = temp;
+            }
+        }
     }
+
     return allTasks;
 }
 

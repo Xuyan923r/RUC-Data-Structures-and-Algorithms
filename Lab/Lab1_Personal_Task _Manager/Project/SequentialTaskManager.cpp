@@ -1,6 +1,5 @@
 #include "SequentialTaskManager.h"
 #include <fstream>
-#include <algorithm>
 #include <iostream>
 
 void SequentialTaskManager::addTask(const Task& task) {
@@ -8,13 +7,12 @@ void SequentialTaskManager::addTask(const Task& task) {
 }
 
 bool SequentialTaskManager::deleteTask(const std::string& name) {
-    auto it = std::find_if(tasks.begin(), tasks.end(), [&](const Task& task) {
-        return task.name == name;
-    });
-
-    if (it != tasks.end()) {
-        tasks.erase(it);
-        return true;
+    int length = static_cast<int>(tasks.size());
+    for (int i = 0; i < length; ++i) {
+        if (tasks[static_cast<std::size_t>(i)].name == name) {
+            tasks.erase(tasks.begin() + i);
+            return true;
+        }
     }
 
     std::cout << "不存在该任务，无法删除。\n";
@@ -22,13 +20,11 @@ bool SequentialTaskManager::deleteTask(const std::string& name) {
 }
 
 bool SequentialTaskManager::updateTask(const std::string& name, const Task& newTask) {
-    auto it = std::find_if(tasks.begin(), tasks.end(), [&](const Task& task) {
-        return task.name == name;
-    });
-
-    if (it != tasks.end()) {
-        *it = newTask;
-        return true;
+    for (auto& task : tasks) {
+        if (task.name == name) {
+            task = newTask;
+            return true;
+        }
     }
 
     return false;
@@ -53,15 +49,38 @@ std::vector<Task> SequentialTaskManager::queryTasks(const std::string& queryStri
 std::vector<Task> SequentialTaskManager::getAllTasksSorted(bool byDueDate) {
     std::vector<Task> sortedTasks = tasks;
 
-    if (byDueDate) {
-        std::sort(sortedTasks.begin(), sortedTasks.end(), [](const Task& a, const Task& b) {
-            return a.dueDate < b.dueDate;
-        });
-    } else {
-        std::sort(sortedTasks.begin(), sortedTasks.end(), [](const Task& a, const Task& b) {
-            return a.priority > b.priority;
-        });
+    if (sortedTasks.empty()) {
+        return sortedTasks;
     }
+
+    if (byDueDate) {
+        int limit = static_cast<int>(sortedTasks.size());
+        for (int i = 0; i < limit; ++i) {
+            for (int j = 0; j < limit - 1; ++j) {
+                std::size_t idx = static_cast<std::size_t>(j);
+                std::size_t nextIdx = static_cast<std::size_t>(j + 1);
+                if (sortedTasks[idx].dueDate > sortedTasks[nextIdx].dueDate) {
+                    Task temp = sortedTasks[idx];
+                    sortedTasks[idx] = sortedTasks[nextIdx];
+                    sortedTasks[nextIdx] = temp;
+                }
+            }
+        }
+    } else {
+        int limit = static_cast<int>(sortedTasks.size());
+        for (int i = 0; i < limit; ++i) {
+            for (int j = 0; j < limit - 1; ++j) {
+                std::size_t idx = static_cast<std::size_t>(j);
+                std::size_t nextIdx = static_cast<std::size_t>(j + 1);
+                if (sortedTasks[idx].priority < sortedTasks[nextIdx].priority) {
+                    Task temp = sortedTasks[idx];
+                    sortedTasks[idx] = sortedTasks[nextIdx];
+                    sortedTasks[nextIdx] = temp;
+                }
+            }
+        }
+    }
+
     return sortedTasks;
 }
 

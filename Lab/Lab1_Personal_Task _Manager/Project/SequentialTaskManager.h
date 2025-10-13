@@ -6,7 +6,6 @@
 // 派生类：使用顺序表 (std::vector) 实现任务管理器
 class SequentialTaskManager : public TaskManager {
 public:
-    // 重写 (override) 基类的所有纯虚函数
     void addTask(const Task& task) override;
     bool deleteTask(const std::string& name) override;
     bool updateTask(const std::string& name, const Task& newTask) override;
