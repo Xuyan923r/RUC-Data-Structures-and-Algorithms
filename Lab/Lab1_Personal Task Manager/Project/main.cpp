@@ -1,57 +1,15 @@
 #include <iostream>
 #include <string>
-#include <limits>
+#include <limits>   // 提供数值极限
 #include <vector>
-#include <chrono>   // 新增：用于获取当前时间
-#include <ctime>    // 新增：用于日期计算
-#include <sstream>  // 新增：用于解析日期字符串
+#include <chrono>   // 获取当前时间
+#include <ctime>    // 日期计算
+#include <sstream>  // 解析日期字符串
+
 #include "TaskManager.h"
 #include "SequentialTaskManager.h"   // 顺序表实现
 #include "LinkedTaskManager.h"       // 单向链表实现
 #include "DoublyLinkedTaskManager.h" // 双向链表实现
-
-// 日期计算辅助函数
-// 输入: "YYYY-MM-DD" 格式的日期字符串
-// 返回: 该日期距离今天的天数。负数表示已过期。
-int daysUntil(const std::string& dateStr) {
-    std::tm dueDate = {};
-    std::stringstream ss(dateStr);
-    char delimiter;
-    int year, month, day;
-
-    // 简单的解析，假设格式总是正确的
-    ss >> year >> delimiter >> month >> delimiter >> day;
-    dueDate.tm_year = year - 1900;
-    dueDate.tm_mon = month - 1;
-    dueDate.tm_mday = day;
-
-    auto now = std::chrono::system_clock::now();
-    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
-    std::tm* today = std::localtime(&now_time);
-
-    std::tm today_date_only = *today;
-    today_date_only.tm_hour = 0; today_date_only.tm_min = 0; today_date_only.tm_sec = 0;
-
-    std::time_t due_time = std::mktime(&dueDate);
-    std::time_t today_time = std::mktime(&today_date_only);
-
-    if (due_time == -1) return -9999; // 无效日期
-    
-    double seconds_diff = std::difftime(due_time, today_time);
-    return static_cast<int>(seconds_diff / (60 * 60 * 24));
-}
-
-// 独立的提醒服务函数 (与数据结构无关)
-std::vector<Task> filterUpcomingTasks(const std::vector<Task>& allTasks, int daysThreshold) {
-    std::vector<Task> result;
-    for (const auto& task : allTasks) {
-        int remainingDays = daysUntil(task.dueDate);
-        if (remainingDays >= 0 && remainingDays <= daysThreshold) {
-            result.push_back(task);
-        }
-    }
-    return result;
-}
 
 
 // --- 原有的函数声明 ---
@@ -65,13 +23,14 @@ void handleSaveToFile(TaskManager* manager);
 void handleLoadFromFile(TaskManager* manager);
 void handleCheckUpcomingTasks(TaskManager* manager);
 void printTasks(const std::vector<Task>& tasks);
+std::vector<Task> filterUpcomingTasks(const std::vector<Task>& allTasks, int daysThreshold); 
 
 int main() {
     TaskManager* manager = nullptr;
     int choice;
 
     std::cout << "=========================================\n";
-    std::cout << "      个人任务管理系统\n";
+    std::cout << "个人任务管理系统\n";
     std::cout << "=========================================\n";
     
     std::cout << "请选择数据结构 (1: 顺序表, 2: 单向链表, 3: 双向链表): ";
@@ -110,8 +69,8 @@ int main() {
             case 2: handleDeleteTask(manager); break;
             case 3: handleUpdateTask(manager); break;
             case 4: handleQueryTasks(manager); break;
-            case 5: handleDisplayTasks(manager, true); break;
-            case 6: handleDisplayTasks(manager, false); break;
+            case 5: handleDisplayTasks(manager, true); break;  // true： 按ddl排序
+            case 6: handleDisplayTasks(manager, false); break; // false：按优先级排序
             case 7: handleSaveToFile(manager); break;
             case 8: handleLoadFromFile(manager); break;
             case 9: handleCheckUpcomingTasks(manager); break;
@@ -144,7 +103,6 @@ void printMenu() {
     std::cout << "---------------------------\n";
 }
 
-// --- 原有的处理函数，内容保持不变 ---
 
 void cleanInputBuffer() {
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -156,7 +114,7 @@ void printTasks(const std::vector<Task>& tasks) {
         return;
     }
     std::cout << "--------------------------------------------------\n";
-    for (const auto& task : tasks) {
+    for (const Task& task : tasks) {
         std::cout << "任务名称: " << task.name << "\n"
                   << "  描述: " << task.description << "\n"
                   << "  优先级: " << task.priority << "\n"
@@ -184,7 +142,7 @@ void handleDeleteTask(TaskManager* manager) {
     std::string name;
     cleanInputBuffer();
     std::cout << "请输入要删除的任务名称: ";
-    std::getline(std::cin, name);
+    std::getline(std::cin, name);   // getline 可以读取包含空格的任务名 cin不行
     manager->deleteTask(name);
 }
 
@@ -234,7 +192,6 @@ void handleQueryTasks(TaskManager* manager) {
         std::cout << "无效选择。\n";
         return;
     }
-
     std::cout << "\n查询结果:\n";
     printTasks(results);
 }
@@ -273,7 +230,6 @@ void handleLoadFromFile(TaskManager* manager) {
     }
 }
 
-// --- 修改后的任务提醒功能处理函数 ---
 void handleCheckUpcomingTasks(TaskManager* manager) {
     int daysThreshold;
     std::cout << "请输入要检查的天数 (例如，输入 7 会查找未来一周内到期的任务): ";
@@ -297,3 +253,44 @@ void handleCheckUpcomingTasks(TaskManager* manager) {
     
     printTasks(upcomingTasks);
 }
+
+// 输入: "YYYY-MM-DD" 格式的日期字符串 返回: 该日期距离今天的天数。负数表示已过期。
+int daysUntil(const std::string& dateStr) {
+    std::tm dueDate = {};
+    std::stringstream ss(dateStr);
+    char delimiter;
+    int year, month, day;
+
+    ss >> year >> delimiter >> month >> delimiter >> day;
+    dueDate.tm_year = year - 1900;
+    dueDate.tm_mon = month - 1;
+    dueDate.tm_mday = day;
+
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    std::tm* today = std::localtime(&now_time);
+
+    std::tm today_date_only = *today;
+    today_date_only.tm_hour = 0; today_date_only.tm_min = 0; today_date_only.tm_sec = 0;
+
+    std::time_t due_time = std::mktime(&dueDate);
+    std::time_t today_time = std::mktime(&today_date_only);
+
+    if (due_time == -1) return -9999; // 无效日期
+    
+    double seconds_diff = std::difftime(due_time, today_time);
+    return static_cast<int>(seconds_diff / (60 * 60 * 24));
+}
+
+// 独立的提醒服务函数 (与数据结构无关)
+std::vector<Task> filterUpcomingTasks(const std::vector<Task>& allTasks, int daysThreshold) {
+    std::vector<Task> result;
+    for (const auto& task : allTasks) {
+        int remainingDays = daysUntil(task.dueDate);
+        if (remainingDays >= 0 && remainingDays <= daysThreshold) {
+            result.push_back(task);
+        }
+    }
+    return result;
+}
+
