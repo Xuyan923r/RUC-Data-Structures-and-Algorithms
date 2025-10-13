@@ -5,6 +5,7 @@
 #include <chrono>   // 获取当前时间
 #include <ctime>    // 日期计算
 #include <sstream>  // 解析日期字符串
+#include <cctype>   // 字符检测支持
 
 #include "TaskManager.h"
 #include "SequentialTaskManager.h"   // 顺序表实现
@@ -24,6 +25,8 @@ void handleLoadFromFile(TaskManager* manager);
 void handleCheckUpcomingTasks(TaskManager* manager);
 void printTasks(const std::vector<Task>& tasks);
 std::vector<Task> filterUpcomingTasks(const std::vector<Task>& allTasks, int daysThreshold); 
+bool isValidDate(const std::string& dateStr);
+bool isValidPriority(int priority);
 
 int main() {
     TaskManager* manager = nullptr;
@@ -126,14 +129,54 @@ void printTasks(const std::vector<Task>& tasks) {
 void handleAddTask(TaskManager* manager) {
     Task newTask;
     cleanInputBuffer(); 
-    std::cout << "请输入任务名称: ";
-    std::getline(std::cin, newTask.name);
+    
+    while (true) {
+        std::cout << "请输入任务名称: ";
+        std::getline(std::cin, newTask.name);
+        if (newTask.name.empty()) {
+            std::cout << "任务名称不能为空。\n";
+            continue;
+        }
+        if (!manager->queryTasks(newTask.name, true).empty()) {
+            std::cout << "存在同名任务，请输入其他名称。\n";
+            continue;
+        }
+        break;
+    }
+
     std::cout << "请输入任务描述: ";
     std::getline(std::cin, newTask.description);
-    std::cout << "请输入优先级(1-5)(数字越大表示越紧急): ";
-    std::cin >> newTask.priority;
-    std::cout << "请输入截止时间(YYYY-MM-DD): ";
-    std::cin >> newTask.dueDate;
+
+    int priorityInput;
+    while (true) {
+        std::cout << "请输入优先级(1-5)(数字越大表示越紧急): ";
+        if (!(std::cin >> priorityInput)) {
+            std::cout << "输入错误：优先级必须是数字。\n";
+            std::cin.clear();
+            cleanInputBuffer();
+            continue;
+        }
+        if (!isValidPriority(priorityInput)) {
+            std::cout << "输入错误：优先级范围为 1-5。\n";
+            cleanInputBuffer();
+            continue;
+        }
+        break;
+    }
+
+    std::string dueDateInput;
+    while (true) {
+        std::cout << "请输入截止时间(YYYY-MM-DD): ";
+        std::cin >> dueDateInput;
+        if (!isValidDate(dueDateInput)) {
+            std::cout << "输入错误：截止日期必须符合 YYYY-MM-DD 格式且为有效日期。\n";
+            continue;
+        }
+        break;
+    }
+
+    newTask.priority = priorityInput;
+    newTask.dueDate = dueDateInput;
     manager->addTask(newTask);
     std::cout << "添加成功！\n";
 }
@@ -254,6 +297,43 @@ void handleCheckUpcomingTasks(TaskManager* manager) {
     printTasks(upcomingTasks);
 }
 
+bool isValidPriority(int priority) {
+    return priority >= 1 && priority <= 5;
+}
+
+bool isValidDate(const std::string& dateStr) {
+    if (dateStr.size() != 10 || dateStr[4] != '-' || dateStr[7] != '-') {
+        return false;
+    }
+
+    for (std::size_t i = 0; i < dateStr.size(); ++i) {
+        if (i == 4 || i == 7) {
+            continue;
+        }
+        if (!std::isdigit(static_cast<unsigned char>(dateStr[i]))) {
+            return false;
+        }
+    }
+
+    int year = std::stoi(dateStr.substr(0, 4));
+    int month = std::stoi(dateStr.substr(5, 2));
+    int day = std::stoi(dateStr.substr(8, 2));
+
+    if (month < 1 || month > 12) {
+        return false;
+    }
+
+    const int daysInMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    int maxDay = daysInMonth[month - 1];
+
+    bool isLeap = (year % 400 == 0) || (year % 4 == 0 && year % 100 != 0);
+    if (month == 2 && isLeap) {
+        maxDay = 29;
+    }
+
+    return day >= 1 && day <= maxDay;
+}
+
 // 输入: "YYYY-MM-DD" 格式的日期字符串 返回: 该日期距离今天的天数。负数表示已过期。
 int daysUntil(const std::string& dateStr) {
     std::tm dueDate = {};
@@ -293,4 +373,3 @@ std::vector<Task> filterUpcomingTasks(const std::vector<Task>& allTasks, int day
     }
     return result;
 }
-

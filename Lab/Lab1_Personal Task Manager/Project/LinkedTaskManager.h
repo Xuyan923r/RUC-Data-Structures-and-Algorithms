@@ -1,5 +1,4 @@
-#ifndef LINKED_TASK_MANAGER_H
-#define LINKED_TASK_MANAGER_H
+#pragma once
 
 #include "TaskManager.h"
 
@@ -21,7 +20,6 @@ public:
     bool loadFromFile(const std::string& filename) override;
 
 private:
-    // 链表节点结构 (作为内部类)
     struct Node {
         Task data;
         Node* next;
@@ -30,8 +28,6 @@ private:
 
     Node* head; // 指向链表头部的指针
 
-    // 私有辅助函数，用于清空链表
+    // 清空链表函数
     void clear(); 
 };
-
-#endif // LINKED_TASK_MANAGER_H

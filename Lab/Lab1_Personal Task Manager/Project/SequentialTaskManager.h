@@ -1,5 +1,4 @@
-#ifndef SEQUENTIAL_TASK_MANAGER_H
-#define SEQUENTIAL_TASK_MANAGER_H
+#pragma once
 
 #include "TaskManager.h"
 #include <vector>
@@ -19,5 +18,3 @@ public:
 private:
     std::vector<Task> tasks; // 使用 std::vector 来存储任务
 };
-
-#endif // SEQUENTIAL_TASK_MANAGER_H

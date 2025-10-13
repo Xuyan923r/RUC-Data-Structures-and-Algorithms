@@ -1,5 +1,4 @@
-#ifndef TASK_H
-#define TASK_H
+#pragma once
 
 #include <string>
 
@@ -11,4 +10,6 @@ struct Task {
     std::string dueDate;     // 任务截止日期 (格式: YYYY-MM-DD) 
 };
 
-#endif // TASK_H
+
+// Notes:  为什么只有int priority前面没有std::string
+// 因为int是基本数据类型，不需要包含头文件，而std::string是C++标准库中的类，需要包含<string>头文件。

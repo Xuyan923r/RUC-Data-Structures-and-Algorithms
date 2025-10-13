@@ -249,8 +249,7 @@ main.cpp
 
 #### Task.h
 ```h
-#ifndef TASK_H
-#define TASK_H
+#pragma once
 
 #include <string>
 
@@ -262,23 +261,25 @@ struct Task {
     std::string dueDate;     // 任务截止日期 (格式: YYYY-MM-DD) 
 };
 
-#endif // TASK_H
+
+// Notes:  为什么只有int priority前面没有std::string
+// 因为int是基本数据类型，不需要包含头文件，而std::string是C++标准库中的类，需要包含<string>头文件。
+
 ```
 
 #### TaskManager.h
 ```h
-#ifndef TASK_MANAGER_H
-#define TASK_MANAGER_H
+#pragma once
 
 #include <string>
 #include <vector>
 #include "Task.h"
 
-// 定义任务管理器的抽象基类 (接口)
+// 定义任务管理器的抽象基类
 class TaskManager {
 public:
     // 虚析构函数，确保通过基类指针删除派生类对象时能正确释放资源
-    virtual ~TaskManager() {}
+    virtual ~TaskManager() noexcept = default;
 
     // 添加任务
     virtual void addTask(const Task& task) = 0;
@@ -302,14 +303,391 @@ public:
     virtual bool loadFromFile(const std::string& filename) = 0;
 };
 
-#endif // TASK_MANAGER_H
 ```
 
 #### main.cpp
 ```cpp
+#include <iostream>
+#include <string>
+#include <limits>   // 提供数值极限
+#include <vector>
+#include <chrono>   // 获取当前时间
+#include <ctime>    // 日期计算
+#include <sstream>  // 解析日期字符串
+#include <cctype>   // 字符检测支持
 
-   #ifndef SEQUENTIAL_TASK_MANAGER_H
-#define SEQUENTIAL_TASK_MANAGER_H
+#include "TaskManager.h"
+#include "SequentialTaskManager.h"   // 顺序表实现
+#include "LinkedTaskManager.h"       // 单向链表实现
+#include "DoublyLinkedTaskManager.h" // 双向链表实现
+
+
+// --- 原有的函数声明 ---
+void printMenu();
+void handleAddTask(TaskManager* manager);
+void handleDeleteTask(TaskManager* manager);
+void handleUpdateTask(TaskManager* manager);
+void handleQueryTasks(TaskManager* manager);
+void handleDisplayTasks(TaskManager* manager, bool byDueDate);
+void handleSaveToFile(TaskManager* manager);
+void handleLoadFromFile(TaskManager* manager);
+void handleCheckUpcomingTasks(TaskManager* manager);
+void printTasks(const std::vector<Task>& tasks);
+std::vector<Task> filterUpcomingTasks(const std::vector<Task>& allTasks, int daysThreshold); 
+bool isValidDate(const std::string& dateStr);
+bool isValidPriority(int priority);
+
+int main() {
+    TaskManager* manager = nullptr;
+    int choice;
+
+    std::cout << "=========================================\n";
+    std::cout << "个人任务管理系统\n";
+    std::cout << "=========================================\n";
+    
+    std::cout << "请选择数据结构 (1: 顺序表, 2: 单向链表, 3: 双向链表): ";
+    std::cin >> choice;
+
+    if (choice == 1) {
+        manager = new SequentialTaskManager();
+        std::cout << "\n已选择 [顺序表] 实现。\n";
+    } else if (choice == 2) {
+        manager = new LinkedTaskManager();
+        std::cout << "\n已选择 [单向链表] 实现。\n";
+    } else if (choice == 3) {
+        manager = new DoublyLinkedTaskManager();
+        std::cout << "\n已选择 [双向链表] 实现。\n";
+    }
+    else {
+        std::cout << "无效选择，程序退出。\n";
+        return 1;
+    }
+
+    // 主循环
+    while (true) {
+        printMenu();
+        std::cout << "请输入您的选择: ";
+        std::cin >> choice;
+
+        if (std::cin.fail()) {
+            std::cout << "错误：请输入一个数字。\n";
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            continue;
+        }
+
+        switch (choice) {
+            case 1: handleAddTask(manager); break;
+            case 2: handleDeleteTask(manager); break;
+            case 3: handleUpdateTask(manager); break;
+            case 4: handleQueryTasks(manager); break;
+            case 5: handleDisplayTasks(manager, true); break;  // true： 按ddl排序
+            case 6: handleDisplayTasks(manager, false); break; // false：按优先级排序
+            case 7: handleSaveToFile(manager); break;
+            case 8: handleLoadFromFile(manager); break;
+            case 9: handleCheckUpcomingTasks(manager); break;
+            case 0:
+                std::cout << "感谢使用，再见！\n";
+                delete manager;
+                return 0;
+            default:
+                std::cout << "无效选择，请重新输入。\n";
+                break;
+        }
+    }
+
+    return 0;
+}
+
+// 打印主菜单
+void printMenu() {
+    std::cout << "\n---------- 主菜单 ----------\n";
+    std::cout << "1. 添加新任务\n";
+    std::cout << "2. 删除任务\n";
+    std::cout << "3. 修改任务\n";
+    std::cout << "4. 查询任务\n";
+    std::cout << "5. 按截止日期显示所有任务\n";
+    std::cout << "6. 按优先级显示所有任务\n";
+    std::cout << "7. 保存任务到文件\n";
+    std::cout << "8. 从文件加载任务\n";
+    std::cout << "9. 检查即将到期的任务\n";
+    std::cout << "0. 退出系统\n";
+    std::cout << "---------------------------\n";
+}
+
+
+void cleanInputBuffer() {
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
+
+void printTasks(const std::vector<Task>& tasks) {
+    if (tasks.empty()) {
+        std::cout << "任务列表为空或未找到匹配项。\n";
+        return;
+    }
+    std::cout << "--------------------------------------------------\n";
+    for (const Task& task : tasks) {
+        std::cout << "任务名称: " << task.name << "\n"
+                  << "  描述: " << task.description << "\n"
+                  << "  优先级: " << task.priority << "\n"
+                  << "  截止日期: " << task.dueDate << "\n";
+        std::cout << "--------------------------------------------------\n";
+    }
+}
+
+void handleAddTask(TaskManager* manager) {
+    Task newTask;
+    cleanInputBuffer(); 
+    
+    while (true) {
+        std::cout << "请输入任务名称: ";
+        std::getline(std::cin, newTask.name);
+        if (newTask.name.empty()) {
+            std::cout << "任务名称不能为空。\n";
+            continue;
+        }
+        if (!manager->queryTasks(newTask.name, true).empty()) {
+            std::cout << "存在同名任务，请输入其他名称。\n";
+            continue;
+        }
+        break;
+    }
+
+    std::cout << "请输入任务描述: ";
+    std::getline(std::cin, newTask.description);
+
+    int priorityInput;
+    while (true) {
+        std::cout << "请输入优先级(1-5)(数字越大表示越紧急): ";
+        if (!(std::cin >> priorityInput)) {
+            std::cout << "输入错误：优先级必须是数字。\n";
+            std::cin.clear();
+            cleanInputBuffer();
+            continue;
+        }
+        if (!isValidPriority(priorityInput)) {
+            std::cout << "输入错误：优先级范围为 1-5。\n";
+            cleanInputBuffer();
+            continue;
+        }
+        break;
+    }
+
+    std::string dueDateInput;
+    while (true) {
+        std::cout << "请输入截止时间(YYYY-MM-DD): ";
+        std::cin >> dueDateInput;
+        if (!isValidDate(dueDateInput)) {
+            std::cout << "输入错误：截止日期必须符合 YYYY-MM-DD 格式且为有效日期。\n";
+            continue;
+        }
+        break;
+    }
+
+    newTask.priority = priorityInput;
+    newTask.dueDate = dueDateInput;
+    manager->addTask(newTask);
+    std::cout << "添加成功！\n";
+}
+
+void handleDeleteTask(TaskManager* manager) {
+    std::string name;
+    cleanInputBuffer();
+    std::cout << "请输入要删除的任务名称: ";
+    std::getline(std::cin, name);   // getline 可以读取包含空格的任务名 cin不行
+    manager->deleteTask(name);
+}
+
+void handleUpdateTask(TaskManager* manager) {
+    std::string name;
+    cleanInputBuffer();
+    std::cout << "请输入要修改的任务名称: ";
+    std::getline(std::cin, name);
+
+    if (manager->queryTasks(name, true).empty()) {
+        std::cout << "未找到该任务。\n";
+        return;
+    }
+
+    Task updatedTask;
+    updatedTask.name = name;
+    std::cout << "请输入新的任务描述: ";
+    std::getline(std::cin, updatedTask.description);
+    std::cout << "请输入新的优先级 (1-5): ";
+    std::cin >> updatedTask.priority;
+    std::cout << "请输入新的截止日期 (YYYY-MM-DD): ";
+    std::cin >> updatedTask.dueDate;
+
+    if (manager->updateTask(name, updatedTask)) {
+        std::cout << "修改成功！\n";
+    }
+}
+
+void handleQueryTasks(TaskManager* manager) {
+    int choice;
+    std::cout << "请选择查询方式 (1: 按名称, 2: 按截止日期): ";
+    std::cin >> choice;
+    cleanInputBuffer();
+    
+    std::string query;
+    std::vector<Task> results;
+
+    if (choice == 1) {
+        std::cout << "请输入任务名称: ";
+        std::getline(std::cin, query);
+        results = manager->queryTasks(query, true);
+    } else if (choice == 2) {
+        std::cout << "请输入截止日期 (YYYY-MM-DD): ";
+        std::getline(std::cin, query);
+        results = manager->queryTasks(query, false);
+    } else {
+        std::cout << "无效选择。\n";
+        return;
+    }
+    std::cout << "\n查询结果:\n";
+    printTasks(results);
+}
+
+void handleDisplayTasks(TaskManager* manager, bool byDueDate) {
+    std::vector<Task> tasks = manager->getAllTasksSorted(byDueDate);
+    if (byDueDate) {
+        std::cout << "\n---所有任务 (按截止日期排序)---\n";
+    } else {
+        std::cout << "\n---所有任务 (按优先级排序)---\n";
+    }
+    printTasks(tasks);
+}
+
+void handleSaveToFile(TaskManager* manager) {
+    std::string filename;
+    cleanInputBuffer();
+    std::cout << "请输入要保存的文件名 (例如: tasks.txt): ";
+    std::getline(std::cin, filename);
+    if (manager->saveToFile(filename)) {
+        std::cout << "保存成功！\n";
+    } else {
+        std::cout << "保存失败！\n";
+    }
+}
+
+void handleLoadFromFile(TaskManager* manager) {
+    std::string filename;
+    cleanInputBuffer();
+    std::cout << "请输入要导入的任务文件地址: ";
+    std::getline(std::cin, filename);
+    if (manager->loadFromFile(filename)) {
+        std::cout << "导入成功！\n";
+    } else {
+        std::cout << "文件不存在，导入失败！\n";
+    }
+}
+
+void handleCheckUpcomingTasks(TaskManager* manager) {
+    int daysThreshold;
+    std::cout << "请输入要检查的天数 (例如，输入 7 会查找未来一周内到期的任务): ";
+    std::cin >> daysThreshold;
+
+    // 检查用户输入是否为有效数字
+    if (std::cin.fail() || daysThreshold < 0) {
+        std::cout << "错误：请输入一个有效的非负整数。\n";
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        return;
+    }
+
+    std::cout << "\n--- 检查未来 " << daysThreshold << " 天内到期的任务 ---\n";
+    
+    // 步骤 1: 从 manager 获取所有任务
+    std::vector<Task> allTasks = manager->getAllTasksSorted(false);
+
+    // 步骤 2: 将所有任务和用户输入的天数交给独立的筛选函数处理
+    std::vector<Task> upcomingTasks = filterUpcomingTasks(allTasks, daysThreshold);
+    
+    printTasks(upcomingTasks);
+}
+
+bool isValidPriority(int priority) {
+    return priority >= 1 && priority <= 5;
+}
+
+bool isValidDate(const std::string& dateStr) {
+    if (dateStr.size() != 10 || dateStr[4] != '-' || dateStr[7] != '-') {
+        return false;
+    }
+
+    for (std::size_t i = 0; i < dateStr.size(); ++i) {
+        if (i == 4 || i == 7) {
+            continue;
+        }
+        if (!std::isdigit(static_cast<unsigned char>(dateStr[i]))) {
+            return false;
+        }
+    }
+
+    int year = std::stoi(dateStr.substr(0, 4));
+    int month = std::stoi(dateStr.substr(5, 2));
+    int day = std::stoi(dateStr.substr(8, 2));
+
+    if (month < 1 || month > 12) {
+        return false;
+    }
+
+    const int daysInMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    int maxDay = daysInMonth[month - 1];
+
+    bool isLeap = (year % 400 == 0) || (year % 4 == 0 && year % 100 != 0);
+    if (month == 2 && isLeap) {
+        maxDay = 29;
+    }
+
+    return day >= 1 && day <= maxDay;
+}
+
+// 输入: "YYYY-MM-DD" 格式的日期字符串 返回: 该日期距离今天的天数。负数表示已过期。
+int daysUntil(const std::string& dateStr) {
+    std::tm dueDate = {};
+    std::stringstream ss(dateStr);
+    char delimiter;
+    int year, month, day;
+
+    ss >> year >> delimiter >> month >> delimiter >> day;
+    dueDate.tm_year = year - 1900;
+    dueDate.tm_mon = month - 1;
+    dueDate.tm_mday = day;
+
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    std::tm* today = std::localtime(&now_time);
+
+    std::tm today_date_only = *today;
+    today_date_only.tm_hour = 0; today_date_only.tm_min = 0; today_date_only.tm_sec = 0;
+
+    std::time_t due_time = std::mktime(&dueDate);
+    std::time_t today_time = std::mktime(&today_date_only);
+
+    if (due_time == -1) return -9999; // 无效日期
+    
+    double seconds_diff = std::difftime(due_time, today_time);
+    return static_cast<int>(seconds_diff / (60 * 60 * 24));
+}
+
+// 独立的提醒服务函数 (与数据结构无关)
+std::vector<Task> filterUpcomingTasks(const std::vector<Task>& allTasks, int daysThreshold) {
+    std::vector<Task> result;
+    for (const auto& task : allTasks) {
+        int remainingDays = daysUntil(task.dueDate);
+        if (remainingDays >= 0 && remainingDays <= daysThreshold) {
+            result.push_back(task);
+        }
+    }
+    return result;
+}
+
+```
+
+#### SequentialTaskManager.h
+```h
+#pragma once
 
 #include "TaskManager.h"
 #include <vector>
@@ -330,81 +708,9 @@ private:
     std::vector<Task> tasks; // 使用 std::vector 来存储任务
 };
 
-#endif // SEQUENTIAL_TASK_MANAGER_H
-```
-
-#### SequentialTaskManager.h
-```h
-#include <iostream>
-#include "TaskManager.h"
-#include "SequentialTaskManager.h"
-#include "LinkedTaskManager.h"
-#include "DoublyLinkedTaskManager.h"
-
-int main() {
-    TaskManager* manager = nullptr;
-    int choice;
-
-    std::cout << "=========================================" << std::endl;
-    std::cout << "      个人任务管理系统" << std::endl;
-    std::cout << "=========================================" << std::endl;
-
-    std::cout << "请选择数据结构 (1: 顺序表, 2: 单向链表, 3: 双向链表): ";
-    std::cin >> choice;
-
-    if (choice == 1) {
-        manager = new SequentialTaskManager();
-        std::cout << "\n已选择 [顺序表] 实现。" << std::endl;
-    } else if (choice == 2) {
-        manager = new LinkedTaskManager();
-        std::cout << "\n已选择 [单向链表] 实现。" << std::endl;
-    } else if (choice == 3) {
-        manager = new DoublyLinkedTaskManager();
-        std::cout << "\n已选择 [双向链表] 实现。" << std::endl;
-    } else {
-        std::cout << "无效选择，程序退出。" << std::endl;
-        return 1;
-    }
-
-    // 主循环
-    while (true) {
-        printMenu();
-        std::cout << "请输入您的选择: ";
-        std::cin >> choice;
-
-        if (std::cin.fail()) {
-            std::cout << "错误：请输入一个数字。" << std::endl;
-            std::cin.clear();
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            continue;
-        }
-
-        switch (choice) {
-            case 1: handleAddTask(manager); break;
-            case 2: handleDeleteTask(manager); break;
-            case 3: handleUpdateTask(manager); break;
-            case 4: handleQueryTasks(manager); break;
-            case 5: handleDisplayTasks(manager, true); break;
-            case 6: handleDisplayTasks(manager, false); break;
-            case 7: handleSaveToFile(manager); break;
-            case 8: handleLoadFromFile(manager); break;
-            case 9: handleCheckUpcomingTasks(manager); break;
-            case 0:
-                std::cout << "感谢使用，再见！" << std::endl;
-                delete manager;
-                return 0;
-            default:
-                std::cout << "无效选择，请重新输入。" << std::endl;
-                break;
-        }
-    }
-
-    return 0;
-}
 ```
 #### SequentialTaskManager.cpp
 ```cpp
-
 #include "SequentialTaskManager.h"
 #include <fstream>
 #include <algorithm>
@@ -521,8 +827,7 @@ bool SequentialTaskManager::loadFromFile(const std::string& filename) {
 
 #### LinkedTaskManager.h
 ```h
-#ifndef LINKED_TASK_MANAGER_H
-#define LINKED_TASK_MANAGER_H
+#pragma once
 
 #include "TaskManager.h"
 
@@ -544,7 +849,6 @@ public:
     bool loadFromFile(const std::string& filename) override;
 
 private:
-    // 链表节点结构 (作为内部类)
     struct Node {
         Task data;
         Node* next;
@@ -553,11 +857,11 @@ private:
 
     Node* head; // 指向链表头部的指针
 
-    // 私有辅助函数，用于清空链表
+    // 清空链表函数
     void clear(); 
 };
 
-#endif // LINKED_TASK_MANAGER_H
+
 ```
 
 #### LinkedTaskManager.cpp
@@ -731,8 +1035,7 @@ bool LinkedTaskManager::loadFromFile(const std::string& filename) {
 
 #### DoublyLinkedTaskManager.h
 ```h
-#ifndef DOUBLY_LINKED_TASK_MANAGER_H
-#define DOUBLY_LINKED_TASK_MANAGER_H
+#pragma once
 
 #include "TaskManager.h"
 
@@ -754,22 +1057,21 @@ public:
     bool loadFromFile(const std::string& filename) override;
 
 private:
-    // 双向链表节点结构 (作为内部类)
+    // 双向链表节点结构
     struct Node {
         Task data;
         Node* next;
-        Node* prev;
+        Node* prev; // 新增：指向前一个节点的指针
         Node(const Task& task) : data(task), next(nullptr), prev(nullptr) {}
     };
 
-    Node* head; // 指向链表头部的指针
-    Node* tail; // 指向链表尾部的指针
+    Node* head; // 指向链表头部
+    Node* tail; // 指向链表尾部
 
-    // 私有辅助函数，用于清空链表
-    void clear(); 
+    // 清空链表函数
+    void clear();
 };
 
-#endif // DOUBLY_LINKED_TASK_MANAGER_H
 ```
 
 #### DoublyLinkedTaskManager.cpp
@@ -791,53 +1093,53 @@ DoublyLinkedTaskManager::~DoublyLinkedTaskManager() {
 void DoublyLinkedTaskManager::clear() {
     Node* current = head;
     while (current != nullptr) {
-        Node* next = current->next;
+        Node* nextNode = current->next;
         delete current;
-        current = next;
+        current = nextNode;
     }
     head = nullptr;
     tail = nullptr;
 }
 
-// 1. 添加任务
+// 1. 添加任务 (得益于tail指针，效率更高)
 void DoublyLinkedTaskManager::addTask(const Task& task) {
     Node* newNode = new Node(task);
-    if (head == nullptr) {
+    if (head == nullptr) { // 链表为空
         head = newNode;
         tail = newNode;
-    } else {
+    } else { // 链表不为空
         tail->next = newNode;
         newNode->prev = tail;
-        tail = newNode;
+        tail = newNode; // 更新尾指针
     }
 }
 
-// 2. 删除任务
+// 2. 删除任务 (指针操作更复杂)
 bool DoublyLinkedTaskManager::deleteTask(const std::string& name) {
-    if (head == nullptr) return false;
-
     Node* current = head;
     while (current != nullptr) {
         if (current->data.name == name) {
-            // 更新前后节点的指针
+            // 找到了要删除的节点
             if (current->prev != nullptr) {
                 current->prev->next = current->next;
-            } else {
-                head = current->next; // 删除的是头节点
+            } else { // 是头节点
+                head = current->next;
             }
 
             if (current->next != nullptr) {
                 current->next->prev = current->prev;
-            } else {
-                tail = current->prev; // 删除的是尾节点
+            } else { // 是尾节点
+                tail = current->prev;
             }
 
             delete current;
+            std::cout << "任务 '" << name << "' 删除成功！\n";
             return true;
         }
         current = current->next;
     }
 
+    std::cout << "不存在该任务，无法删除。\n";
     return false;
 }
 
@@ -868,17 +1170,15 @@ std::vector<Task> DoublyLinkedTaskManager::queryTasks(const std::string& querySt
     return result;
 }
 
-// 5. 查看任务列表 (排序)
+// 5. 查看任务列表 (排序) - 逻辑与单向链表实现相同
 std::vector<Task> DoublyLinkedTaskManager::getAllTasksSorted(bool byDueDate) {
     std::vector<Task> allTasks;
     Node* current = head;
-    // 步骤1: 将链表中的所有任务复制到 vector 中
     while (current != nullptr) {
         allTasks.push_back(current->data);
         current = current->next;
     }
 
-    // 步骤2: 对 vector 进行排序 (与 SequentialTaskManager 完全相同的逻辑)
     if (byDueDate) {
         std::sort(allTasks.begin(), allTasks.end(), [](const Task& a, const Task& b) {
             return a.dueDate < b.dueDate;
@@ -891,7 +1191,7 @@ std::vector<Task> DoublyLinkedTaskManager::getAllTasksSorted(bool byDueDate) {
     return allTasks;
 }
 
-// 6. 保存到文件
+// 6. 保存到文件 - 逻辑与单向链表实现相同
 bool DoublyLinkedTaskManager::saveToFile(const std::string& filename) {
     std::ofstream outFile(filename);
     if (!outFile.is_open()) return false;
@@ -902,7 +1202,6 @@ bool DoublyLinkedTaskManager::saveToFile(const std::string& filename) {
                 << current->data.priority << "," << current->data.dueDate << "\n";
         current = current->next;
     }
-
     outFile.close();
     return true;
 }
@@ -912,14 +1211,13 @@ bool DoublyLinkedTaskManager::loadFromFile(const std::string& filename) {
     std::ifstream inFile(filename);
     if (!inFile.is_open()) return false;
 
-    clear(); // 加载前先清空现有链表
+    clear(); // 加载前先清空
 
     std::string line;
     while (std::getline(inFile, line)) {
         Task task;
         size_t pos = 0;
         
-        // 简单的CSV解析
         pos = line.find(",");
         task.name = line.substr(0, pos);
         line.erase(0, pos + 1);
@@ -934,7 +1232,7 @@ bool DoublyLinkedTaskManager::loadFromFile(const std::string& filename) {
         
         task.dueDate = line;
 
-        addTask(task); // 直接调用 addTask 方法来添加到链表
+        addTask(task); // 调用addTask来添加
     }
 
     inFile.close();

@@ -1,15 +1,14 @@
-#ifndef TASK_MANAGER_H
-#define TASK_MANAGER_H
+#pragma once
 
 #include <string>
 #include <vector>
 #include "Task.h"
 
-// 定义任务管理器的抽象基类 (接口)
+// 定义任务管理器的抽象基类
 class TaskManager {
 public:
     // 虚析构函数，确保通过基类指针删除派生类对象时能正确释放资源
-    virtual ~TaskManager() {}
+    virtual ~TaskManager() noexcept = default;
 
     // 添加任务
     virtual void addTask(const Task& task) = 0;
@@ -32,5 +31,3 @@ public:
     // 从文件读取任务列表 
     virtual bool loadFromFile(const std::string& filename) = 0;
 };
-
-#endif // TASK_MANAGER_H

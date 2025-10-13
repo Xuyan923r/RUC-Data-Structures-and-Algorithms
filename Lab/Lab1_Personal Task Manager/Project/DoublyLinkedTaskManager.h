@@ -1,5 +1,4 @@
-#ifndef DOUBLY_LINKED_TASK_MANAGER_H
-#define DOUBLY_LINKED_TASK_MANAGER_H
+#pragma once
 
 #include "TaskManager.h"
 
@@ -30,10 +29,8 @@ private:
     };
 
     Node* head; // 指向链表头部
-    Node* tail; // 新增：指向链表尾部，用于高效添加
+    Node* tail; // 指向链表尾部
 
-    // 私有辅助函数，用于清空链表
+    // 清空链表函数
     void clear();
 };
-
-#endif // DOUBLY_LINKED_TASK_MANAGER_H
