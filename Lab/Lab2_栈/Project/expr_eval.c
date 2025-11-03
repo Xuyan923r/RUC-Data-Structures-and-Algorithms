@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <ctype.h>
+#include <stdlib.h> 
 
 #define MAXSIZE 100
 
@@ -75,7 +76,15 @@ int apply(int a, int b, char op) {
         case '+': return a + b;
         case '-': return a - b;
         case '*': return a * b;
-        case '/': return a / b;   // 默认整数除法
+        case '/':
+            if (b == 0) {
+                printf("错误: 除数为 0。\n");
+                exit(1);  
+            }
+            return a / b;   
+        default:
+            printf("未知运算符: %c\n", op);
+            exit(1);
     }
     return 0;
 }
@@ -83,7 +92,7 @@ int apply(int a, int b, char op) {
 
 int main() {
     char expr[256];
-    printf("请输入以=结尾的表达式: ");
+    printf("请输入以=结尾的表达式:（中间不要有空格） ");
     scanf("%s", expr);
 
     push_optr('='); 
@@ -101,10 +110,11 @@ int main() {
 
             char buf[32];
             sprintf(buf, "%d", num);
-            show_state(buf, "读入数字并压入操作数栈");
+            show_state(buf, "数字入栈");
 
             ch = expr[i];
         }
+
         else {
             char top = peek_optr();
             char t = compare(top, ch);
@@ -112,13 +122,13 @@ int main() {
             if (t == '<') {
                 push_optr(ch);
                 char buf[2] = { ch, '\0' };
-                show_state(buf, "移进（压入运算符栈）");
+                show_state(buf, "符号入栈");
                 ch = expr[++i];
             }
             else if (t == '=') {
                 pop_optr();
                 char buf[2] = { ch, '\0' };
-                show_state(buf, "括号匹配/或=匹配，弹栈");
+                show_state(buf, "括号匹配");
                 ch = expr[++i];
             }
             else if (t == '>') {
@@ -129,7 +139,7 @@ int main() {
                 push_opnd(res);
 
                 char buf[2] = { op, '\0' };
-                show_state(buf, "规约（弹栈计算一次）");
+                show_state(buf, "计算");
             }
         }
     }

@@ -3,10 +3,10 @@
 #define MAX_BOARD 8
 #define MOVE_COUNT 8
 
-static int board_recursive[MAX_BOARD][MAX_BOARD];
-static int board_iterative[MAX_BOARD][MAX_BOARD];
-static int dx[MOVE_COUNT] = {2, 1, -1, -2, -2, -1, 1, 2};
-static int dy[MOVE_COUNT] = {1, 2, 2, 1, -1, -2, -2, -1};
+int board_recursive[MAX_BOARD][MAX_BOARD];
+int board_iterative[MAX_BOARD][MAX_BOARD];
+int dx[MOVE_COUNT] = {2, 1, -1, -2, -2, -1, 1, 2};
+int dy[MOVE_COUNT] = {1, 2, 2, 1, -1, -2, -2, -1};
 
 void reset_board(int board[MAX_BOARD][MAX_BOARD], int n) {
     int i, j;
@@ -61,7 +61,7 @@ void run_recursive_knight() {
         printf("棋盘尺寸超出范围。\n");
         return;
     }
-    printf("请输入骑士起点的行列(从1开始): ");
+    printf("请输入骑士起点的行列: ");
     if (scanf("%d %d", &sx, &sy) != 2) {
         printf("输入错误。\n");
         return;
@@ -73,10 +73,10 @@ void run_recursive_knight() {
 
     reset_board(board_recursive, n);
     if (dfs_knight(n, sx - 1, sy - 1, 1)) {
-        printf("递归方法找到了一条路线:\n");
+        printf("找到了一条路线:\n");
         print_board(board_recursive, n);
     } else {
-        printf("递归方法没有找到路线。\n");
+        printf("没有找到路线。\n");
     }
 }
 
@@ -101,7 +101,7 @@ void run_iterative_knight() {
         printf("棋盘尺寸超出范围。\n");
         return;
     }
-    printf("请输入骑士起点的行列(从1开始): ");
+    printf("请输入骑士起点的行列: ");
     if (scanf("%d %d", &sx, &sy) != 2) {
         printf("输入错误。\n");
         return;
