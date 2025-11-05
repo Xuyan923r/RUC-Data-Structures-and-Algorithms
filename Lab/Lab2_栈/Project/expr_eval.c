@@ -103,7 +103,7 @@ int main() {
         if (isdigit(ch)) {
             int num = 0;
             while (isdigit(expr[i])) {
-                num = num * 10 + (expr[i] - '0');
+                num = num * 10 + (expr[i] - '0');   // 因为是ASCII码，所以要减去'0'
                 i++;
             }
             push_opnd(num);
