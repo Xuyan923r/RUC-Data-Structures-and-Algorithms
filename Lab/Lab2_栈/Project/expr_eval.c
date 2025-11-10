@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h> 
+#include <string.h>
 
 #define MAXSIZE 100
 
@@ -94,6 +95,12 @@ int main() {
     char expr[256];
     printf("请输入以=结尾的表达式:（中间不要有空格） ");
     scanf("%s", expr);
+
+    size_t len = strlen(expr);
+    if (len == 0 || expr[len - 1] != '=') {
+        printf("错误: 表达式必须以=结尾。\n");
+        return 1;
+    }
 
     push_optr('='); 
     int i = 0;
